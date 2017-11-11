@@ -660,7 +660,7 @@ class ParamRun:
                     sig=-1
                 cl0=self.cl_fid_arr[:,:,:]
                 self.dcl_arr[i,:,:,:]=(-3*cl0+4*clm-clp)/(2*sig*self.params_fshr[i].dval)
-
+        
         if self.include_im_fg :
             print "Adding IM foregrounds"
             nbt1=0
@@ -796,8 +796,9 @@ class ParamRun:
             self.fshr_bao+=np.sum(dda_nodes[:,None,:]*dda_nodes[None,:,:]/self.e_nodes_DA**2,axis=2)
             self.fshr_bao+=np.sum(dhh_nodes[:,None,:]*dhh_nodes[None,:,:]/self.e_nodes_HH**2,axis=2)
             self.fshr_bao+=np.sum(ddv_nodes[:,None,:]*ddv_nodes[None,:,:]/self.e_nodes_DV**2,axis=2)
+    
 
-
+    
     def get_fisher_cls(self) :
         """ Compute Fisher matrix from numerical derivatives """
 
@@ -830,7 +831,10 @@ class ParamRun:
                         lmax_arr[nbt]=min(tr.lmax_bins[ib],tr.lmax)
                         lmin_arr[nbt]=lmn
                         nbt+=1
-
+        
+        
+            print "WHAT IS THE TRACER", self.n_tracers
+            #DK 2017: Default case
             for lb in np.arange((self.lmax+1)/NLB) :
                 for ib in np.arange(NLB) :
                     l=lb*NLB+ib
@@ -841,6 +845,9 @@ class ParamRun:
                     cl_fid=self.cl_fid_arr[lb,indices,:][:,indices]
                     cl_noise=self.cl_noise_arr[lb,indices,:][:,indices]
                     icl=np.linalg.inv(cl_fid+cl_noise)
+                    #print "WHAT IS INDICES??", indices
+                    #print self.cl_fid_arr[lb,indices,:]
+                    #print self.cl_fid_arr[lb,indices,:][:,indices]
                     for i in np.arange(self.npar_vary+self.npar_mbias) :
                         dcl1=self.dcl_arr[i,lb,indices,:][:,indices]
                         for j in np.arange(self.npar_vary-i+self.npar_mbias)+i :
@@ -851,6 +858,34 @@ class ParamRun:
                                                                                                  icl))))
                             if i!=j :
                                 self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
+            
+            #DK 2017: Modified fisher
+            
+            
+    #        for lb in np.arange((self.lmax+1)/NLB) :
+    #            for ib in np.arange(NLB) :
+    #                l=lb*NLB+ib
+    #                if l==0 :
+    #                    continue
+    #                ell=float(l)
+    #                indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
+    #                #cl_fid=self.cl_fid_arr[lb,indices,:][:,indices]
+    #                #cl_noise=self.cl_noise_arr[lb,indices,:][:,indices]
+    #                cl_t[lb,indices,:]=self.cl_fid_arr[lb,indices,:]+self.cl_noise_arr[lb,indices,:] 
+    #                for a in np.arange(self.npar_vary+self.npar_mbias) :
+    #                    dcl1=self.dcl_arr[a,lb,indices,:][:,indices]
+    #                    for b in np.arange(self.npar_vary-a+self.npar_mbias)+a :
+    #                        dcl2=self.dcl_arr[b,lb,indices,:][:,indices]
+    #                        cl_t=cl_fid+cl_noise
+    #                        dcl1=
+    #                        vcl2=mat_unwap(dcl2)
+    #
+    #                        if a!=b :
+    #                            self.fshr_l[b,a,l]=self.fshr_l[a,b,l]
+                
+            
+            
+            
 
             self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
 
@@ -923,20 +958,20 @@ class ParamRun:
             sigma_f=1./np.sqrt(self.fshr[i,i])
             print " - m"+str(idx)+" = 0.0" +"+- %.4lE(m)"%sigma_m+" +- %.4lE(f)"%sigma_f
 
-        ##Output full Fisher matrix--------------------------------
-        #for i in np.arange(len(self.params_fshr)) :
-        #    for j in np.arange(len(self.params_fshr)) :
-        #        fishstr="%41E"%self.fshr[i,j]
-        #        if(j==0):
-        #            fishmatstr=fishstr
-        #        else:
-        #            fishmatstr=fishmatstr+" "+fishstr
-        #    fishfile.write(fishmatstr+"\n")
-        ##---------------------------------------------------------
-        #fishfile.close()
-#        fsh.plot_fisher_all(self.params_fshr,[self.fshr],["none"],[2],
-#                            ["solid"],["black"],["whatever"],3.,
-#                            self.output_dir+"/"+self.output_fisher+"/fisher"+self.plot_ext)
+        #Output full Fisher matrix--------------------------------
+        for i in np.arange(len(self.params_fshr)) :
+            for j in np.arange(len(self.params_fshr)) :
+                fishstr="%41E"%self.fshr[i,j]
+                if(j==0):
+                    fishmatstr=fishstr
+                else:
+                    fishmatstr=fishmatstr+" "+fishstr
+            fishfile.write(fishmatstr+"\n")
+        #---------------------------------------------------------
+        fishfile.close()
+        fsh.plot_fisher_all(self.params_fshr,[self.fshr],["none"],[2],
+                            ["dotted"],["black"],["Fisher contour"],3.,
+                            self.output_dir+"/"+self.output_fisher+"/fisher"+self.plot_ext)
         ##Parameter pairs, all combinations (Elisa)---------------------
         #index_plot=np.where(np.array([p.do_plot for p in self.params_fshr]))
         #n_params=len(index_plot[0])
