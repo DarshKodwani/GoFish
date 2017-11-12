@@ -833,8 +833,42 @@ class ParamRun:
                         nbt+=1
         
         
-            print "WHAT IS THE TRACER", self.n_tracers
+            #print "WHAT IS THE TRACER", self.n_tracers, nbt, self.nbins_total
             #DK 2017: Default case
+            
+            #for lb in np.arange((self.lmax+1)/NLB) :
+            #    for ib in np.arange(NLB) :
+            #        l=lb*NLB+ib
+            #        if l==0 :
+            #            continue
+            #        ell=float(l)
+            #        indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
+            #        cl_fid=self.cl_fid_arr[lb,indices,:][:,indices]
+            #        cl_noise=self.cl_noise_arr[lb,indices,:][:,indices]
+            #        icl=np.linalg.inv(cl_fid+cl_noise)
+            #        #print np.shape(icl)
+            #        #print "WHAT IS INDICES??", indices
+            #        #print self.cl_fid_arr[lb,indices,:]
+            #        #print self.cl_fid_arr[lb,indices,:][:,indices]
+            #        for i in np.arange(self.npar_vary+self.npar_mbias) :
+            #            dcl1=self.dcl_arr[i,lb,indices,:][:,indices]
+            #            #print np.shape(dcl1)
+            #            for j in np.arange(self.npar_vary-i+self.npar_mbias)+i :
+            #                dcl2=self.dcl_arr[j,lb,indices,:][:,indices]
+            #               # print np.shape(dcl2)
+            #                self.fshr_l[i,j,l]=self.fsky*(ell+0.5)*np.trace(np.dot(dcl1,
+            #                                                                       np.dot(icl,
+            #                                                                              np.dot(dcl2,
+            #                                                                                     icl))))
+            #                if i!=j :
+            #                    self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
+                                
+                                
+                                
+                                
+                                
+            #DK 2017: Modified case  
+               
             for lb in np.arange((self.lmax+1)/NLB) :
                 for ib in np.arange(NLB) :
                     l=lb*NLB+ib
@@ -850,38 +884,35 @@ class ParamRun:
                     #print self.cl_fid_arr[lb,indices,:][:,indices]
                     for i in np.arange(self.npar_vary+self.npar_mbias) :
                         dcl1=self.dcl_arr[i,lb,indices,:][:,indices]
+                        print "Shape of dcl1", np.shape(self.dcl_arr[i,lb,:,:])
                         for j in np.arange(self.npar_vary-i+self.npar_mbias)+i :
                             dcl2=self.dcl_arr[j,lb,indices,:][:,indices]
-                            self.fshr_l[i,j,l]=self.fsky*(ell+0.5)*np.trace(np.dot(dcl1,
-                                                                                   np.dot(icl,
-                                                                                          np.dot(dcl2,
-                                                                                                 icl))))
+                            #print dcl2
+                            for a in np.arange(self.nbins_total) :
+                                for b in np.arange(self.nbins_total) :
+                                    for y in np.arange(self.nbins_total) :
+                                        for z in np.arange(self.nbins_total) :
+                                            dcli_ab=self.dcl_arr[i,lb,a,b]
+                                            dclj_yz=self.dcl_arr[i,lb,y,z]
+                                            dcli_bz=self.dcl_arr[i,lb,b,z]
+                                            dcli_by=self.dcl_arr[i,lb,b,y]
+                                            dcli_ay=self.dcl_arr[i,lb,a,y]
+                                            dcli_az=self.dcl_arr[i,lb,a,z]
+                                            dclj_ay=self.dcl_arr[j,lb,a,y]
+                                            dclj_az=self.dcl_arr[j,lb,a,z]
+                                            dclj_by=self.dcl_arr[j,lb,b,y]
+                                            dclj_bz=self.dcl_arr[j,lb,b,z]
+                                            cl_ay=self.cl_fid_arr[lb,a,y]+self.cl_noise_arr[lb,a,y]
+                                            cl_bz=self.cl_fid_arr[lb,b,z]+self.cl_noise_arr[lb,b,z]
+                                            cl_az=self.cl_fid_arr[lb,a,z]+self.cl_noise_arr[lb,a,z]
+                                            cl_by=self.cl_fid_arr[lb,b,y]+self.cl_noise_arr[lb,b,y]
+                                            inv_cov=(cl_ay*cl_bz+cl_az*cl_by)**(-1)
+                                            dcli=dcli_ay*cl_bz+cl_ay*dcli_bz+dcli_az*cl_by+cl_az*dcli_by
+                                            dclj=dclj_ay*cl_bz+cl_ay*dclj_bz+dclj_az*cl_by+cl_az*dclj_by
+                                            self.fshr_l[i,j,l]=self.fsky*(2*ell+1)*(dcli_ab*inv_cov*dclj_yz)
+                                            +0.5*self.fsky*(inv_cov*dcli*inv_cov*dclj)
                             if i!=j :
                                 self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
-            
-            #DK 2017: Modified fisher
-            
-            
-    #        for lb in np.arange((self.lmax+1)/NLB) :
-    #            for ib in np.arange(NLB) :
-    #                l=lb*NLB+ib
-    #                if l==0 :
-    #                    continue
-    #                ell=float(l)
-    #                indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
-    #                #cl_fid=self.cl_fid_arr[lb,indices,:][:,indices]
-    #                #cl_noise=self.cl_noise_arr[lb,indices,:][:,indices]
-    #                cl_t[lb,indices,:]=self.cl_fid_arr[lb,indices,:]+self.cl_noise_arr[lb,indices,:] 
-    #                for a in np.arange(self.npar_vary+self.npar_mbias) :
-    #                    dcl1=self.dcl_arr[a,lb,indices,:][:,indices]
-    #                    for b in np.arange(self.npar_vary-a+self.npar_mbias)+a :
-    #                        dcl2=self.dcl_arr[b,lb,indices,:][:,indices]
-    #                        cl_t=cl_fid+cl_noise
-    #                        dcl1=
-    #                        vcl2=mat_unwap(dcl2)
-    #
-    #                        if a!=b :
-    #                            self.fshr_l[b,a,l]=self.fshr_l[a,b,l]
                 
             
             
