@@ -843,12 +843,9 @@ class ParamRun:
  #                       continue
  #                   ell=float(l)
  #                   indices=np.where((lmin_arr<=l) & (lmax_arr>=l))[0]
- #                   print "indices", indices
  #                   cl_fid=self.cl_fid_arr[lb,indices,:][:,indices]
  #                   cl_noise=self.cl_noise_arr[lb,indices,:][:,indices]
- #                   print "CL_FID", cl_fid
  #                   icl=np.linalg.inv(cl_fid+cl_noise)
- #                   print "ICL", icl
  #
  #                   for i in np.arange(self.npar_vary+self.npar_mbias) :
  #                       dcl1=self.dcl_arr[i,lb,indices,:][:,indices]
@@ -884,73 +881,35 @@ class ParamRun:
                     covmat=np.zeros([nspec_here,nspec_here])
                     dcovmat1=np.zeros([nspec_here,nspec_here])
                     dcovmat2=np.zeros([nspec_here,nspec_here])
-                    dcab_1=np.zeros(nspec_here)
-                    dcab_2=np.zeros(nspec_here)
-                    dcyz_1=np.zeros(nspec_here)
-                    dcay_1=np.zeros(nspec_here)
-                    dcbz_1=np.zeros(nspec_here)
-                    dcaz_1=np.zeros(nspec_here)
-                    dcby_1=np.zeros(nspec_here)
-                    dcyz_2=np.zeros(nspec_here)
-                    dcay_2=np.zeros(nspec_here)
-                    dcbz_2=np.zeros(nspec_here)
-                    dcaz_2=np.zeros(nspec_here)
-                    dcby_2=np.zeros(nspec_here)
-                    cay=np.zeros(nspec_here)
-                    cby=np.zeros(nspec_here)
-                    caz=np.zeros(nspec_here)
-                    cbz=np.zeros(nspec_here)
-
                     cl_fid=self.cl_fid_arr[lb,indices,:][:,indices]+self.cl_noise_arr[lb,indices,:][:,indices]
                     for i in np.arange(self.npar_vary+self.npar_mbias) :
                         dcl1=self.dcl_arr[i,lb,indices,:][:,indices]
                         for j in np.arange(self.npar_vary-i+self.npar_mbias)+i :
-                            dcl2=self.dcl_arr[j,lb,indices,:][:,indices]                            
-                            
+                            dcl2=self.dcl_arr[j,lb,indices,:][:,indices]                                                
                             ivec1=0
                             for a in np.arange(nbins_here) :
                                 for b in np.arange(a,nbins_here) :
-                                    dcab_1[ivec1]=dcl1[a,b]
-                                    dcab_2[ivec1]=dcl2[a,b]
+                                    dvec1[ivec1]=dcl1[a,b]
+                                    dvec2[ivec1]=dcl2[a,b]
                                     ivec2=0
                                     for y in np.arange(nbins_here) :
                                         for z in np.arange(y,nbins_here) :
-                                            dcyz_1[ivec1]=dcl1[y,z]
-                                            dcay_1[ivec1]=dcl1[a,y]
-                                            dcbz_1[ivec1]=dcl1[b,z]
-                                            dcaz_1[ivec1]=dcl1[a,z]
-                                            dcby_1[ivec1]=dcl1[b,y]
-                                            dcyz_2[ivec1]=dcl2[y,z]
-                                            dcay_2[ivec1]=dcl2[a,y]
-                                            dcbz_2[ivec1]=dcl2[b,z]
-                                            dcaz_2[ivec1]=dcl2[a,z]
-                                            dcby_2[ivec1]=dcl2[b,y]
-                                            cay[ivec1]=cl_fid[a,y]
-                                            cby[ivec1]=cl_fid[b,y]
-                                            caz[ivec1]=cl_fid[a,z]
-                                            cbz[ivec1]=cl_fid[b,z]
-                                            covmat[ivec1,ivec2]=np.dot(cay,cbz)+np.dot(caz,cby) #add ell factors
-                                            dcovmat1[ivec1,ivec2]=np.dot(dcay_1,cby)+np.dot(cay,dcbz_1)+np.dot(dcaz_1,cby)+np.dot(caz,dcby_1)
-                                            dcovmat2[ivec1,ivec2]=np.dot(dcay_2,cby)+np.dot(cay,dcbz_2)+np.dot(dcaz_2,cby)+np.dot(caz,dcby_2)
-                                            
-                                            #...
+                                            cay=cl_fid[a,y]
+                                            cby=cl_fid[b,y]
+                                            caz=cl_fid[a,z]
+                                            cbz=cl_fid[b,z]
+                                            covmat[ivec1,ivec2]=cay*cbz+cby*caz
+                                            dcovmat1[ivec1,ivec2]=dcl1[a,y]*cbz+dcl1[a,z]*cby+dcl1[b,y]*caz+dcl1[b,z]*cay
+                                            dcovmat2[ivec1,ivec2]=dcl2[a,y]*cbz+dcl2[a,z]*cby+dcl2[b,y]*caz+dcl2[b,z]*cay
                                             ivec2+=1
-                                    #...
-                                    ivec1+=1
-                            print "COVMAT shape", np.shape(covmat)
-                            #You have all you need, compute inv_covar and then fish[i,j,l]                     
+                                    ivec1+=1                   
                             invcov=np.linalg.inv(covmat)
-                            self.fshr_l[i,j,l]=self.fsky*((ell+0.5)*(np.dot(dcab_1,np.dot(invcov,dcyz_2)))
-                            +0.5*np.trace(np.dot(covmat,(np.dot(dcovmat1,np.dot(covmat,dcovmat2))))))
-            #                
-            #                #self.fshr_l[i,j,l]=self.fsky*((ell+0.5)*(dcab_1*invcov*dcyz_2) + 0.5*(covmat*dcovmat1*covmat*dcovmat2))      
-                            
-                            
-                            
+                            self.fshr_l[i,j,l]= self.fsky*(2*ell+1)*(np.dot(dvec1,np.dot(invcov,dvec2)))
+                            self.fshr_l[i,j,l]+=0.5*np.trace(np.dot(invcov,(np.dot(dcovmat1,np.dot(invcov,dcovmat2)))))   
                             if i!=j :
                                 self.fshr_l[j,i,l]=self.fshr_l[i,j,l]
-
-            self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
+                                
+                self.fshr_cls[:,:]=np.sum(self.fshr_l,axis=2)
 
     def get_bias(self) :
         """ Compute the bias for each varied parameter """
